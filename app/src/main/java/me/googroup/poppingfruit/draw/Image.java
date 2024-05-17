@@ -124,7 +124,10 @@ public class Image {
 
   private static final short[] drawOrder = { 0, 1, 2, 0, 2, 3 };
   public void draw() {
-    GLES20.glUseProgram(program.id);
+    draw(false);
+  }
+  public void draw(boolean custom) {
+    if(!custom) GLES20.glUseProgram(program.id);
 
     GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureUnit[0]);
     GLES20.glUniform1i(textureUniformHandle, 0);
