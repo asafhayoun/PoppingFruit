@@ -154,7 +154,10 @@ public class GameRenderer implements GLSurfaceView.Renderer {
 //    heightFix = (float)bigger / (float)height;
     this.width =  (float)width / (float)bigger;
     this.height = (float)height / (float)bigger;
-    GLES20.glViewport((int)(width * (this.width-1)), (int)(height * (this.height-1)), bigger, bigger);
+    // I spent 2 hours on this, please do not touch
+    GLES20.glViewport((int)((-1 + this.width) * bigger * 0.5),
+      (int)((-1 + this.height) * bigger * 0.5), bigger, bigger);
+    //float i = (-1 - this.width) * -bigger;
     Log.i("VIEWPORT", "Width: " + this.width + " Height: " + this.height);
     viewPortWidth = width;
     viewPortHeight = height;
