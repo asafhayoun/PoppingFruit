@@ -71,7 +71,11 @@ public class GameRenderer implements GLSurfaceView.Renderer {
   void onMoveFinger(float x) {
     newFruitX = x;
   }
+  long lastReleasedFruit = 0;
   void onReleaseFinger() {
+    long now = System.currentTimeMillis();
+    if(now < lastReleasedFruit + 667) return;
+    lastReleasedFruit = now;
     fruits.add(new Fruit(newFruitX, 0.75f, Fruit.Type.CHERRY));
   }
   public void onDrawFrame(GL10 unused) {
@@ -151,7 +155,8 @@ public class GameRenderer implements GLSurfaceView.Renderer {
   public void onSurfaceChanged(GL10 unused, int width, int height) {
     int bigger = Math.max(width, height);
 //    widthFix = (float)bigger / (float)width;
-//    heightFix = (float)bigger / (float)height;
+//    heightFix = (float)bigger / (float)height
+;
     this.width =  (float)width / (float)bigger;
     this.height = (float)height / (float)bigger;
     // I spent 2 hours on this, please do not touch
