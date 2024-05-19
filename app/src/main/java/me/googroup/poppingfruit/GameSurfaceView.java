@@ -20,7 +20,9 @@ public class GameSurfaceView extends GLSurfaceView {
     if(renderer.won) return false;
     int action = event.getActionMasked();
     if(action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_MOVE) {
-      renderer.onMoveFinger(2 * event.getX() / renderer.viewPortSize - 1); // Game coordinates between -1 and 1
+      int width = renderer.viewPortWidth, height = renderer.viewPortHeight;
+      int x = (int)(width * (renderer.width-1)), y = (int)(height * (renderer.height-1));
+      renderer.onMoveFinger(2 * renderer.width * event.getX() / width - renderer.width); // Game coordinates between -1 and 1
     } else if (action == MotionEvent.ACTION_UP) {
       renderer.onReleaseFinger();
     }
