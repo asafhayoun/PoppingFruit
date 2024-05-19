@@ -12,7 +12,6 @@ import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public class GameRenderer implements GLSurfaceView.Renderer {
@@ -50,52 +49,60 @@ public class GameRenderer implements GLSurfaceView.Renderer {
       fruitImages[i] = new Image(imageRenderer);
     }
     try {
-      background.setTexture(background.loadTexture(context, "game_background.jpeg"));
+      background.loadTexture(context, "game_background.jpeg");
       victoryImage.loadTexture(context, "victory.png");
       fruitImages[0].loadTexture(context, "cherry.png");
       fruitImages[1].loadTexture(context, "watermelon.png");
     } catch (IOException e) {
       Log.e("RESOURCE", "Can't read resources");
     }
-    fruits = new ArrayList<Fruit>(Arrays.asList(
-      new Fruit(0, 0, Fruit.Type.CHERRY),
-      new Fruit(0, 0.3, Fruit.Type.CHERRY),
-      new Fruit(0, 0.6, Fruit.Type.CHERRY),
-      new Fruit(0, -0.3, Fruit.Type.CHERRY)));
+//    fruits = new ArrayList<Fruit>(Arrays.asList(
+//      new Fruit(0, 0, Fruit.Type.CHERRY),
+//      new Fruit(0, 0.3, Fruit.Type.CHERRY),
+//      new Fruit(0, 0.6, Fruit.Type.CHERRY),
+//      new Fruit(0, -0.3, Fruit.Type.CHERRY)));
+    fruits = new ArrayList<>(128);
     Image.vertexShader.unload();
     Image.fragmentShader.unload();
+    victoryShader.unload();
     lastDrawTime = System.nanoTime();
     won = false;
     victoryEffectCoefficient = 0;
   }
-
+  float newFruitX = 0;
+  void onMoveFinger(float x) {
+    newFruitX = x;
+  }
+  void onReleaseFinger() {
+    fruits.add(new Fruit(newFruitX, 0.75f, Fruit.Type.CHERRY));
+  }
   public void onDrawFrame(GL10 unused) {
     long lastTime = lastDrawTime;
     lastDrawTime = System.nanoTime();
-    float delta = (float) (lastDrawTime - lastTime) * 0.000001f;
+    float delta = Math.min(50f, (float) (lastDrawTime - lastTime) * 0.000001f);
     // Redraw background color
     GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
     background.draw();
+    float cherrySize = (float)Fruit.radii[0];
+    fruitImages[0].setCoords(newFruitX - cherrySize * widthFix, 0.75f - cherrySize * heightFix,
+      cherrySize * 2 * widthFix, cherrySize * 2 * heightFix).draw();
     if(won) {
       victoryEffectCoefficient += delta * 0.001f;
+      victoryEffectCoefficient %= 3;
       victoryImage.setCoords(-0.75f, 0f, 1.5f, 0.75f);
       GLES20.glUseProgram(victoryRenderer.id);
-      victoryEffectCoefficient %= 3;
       GLES20.glUniform1f(victoryEffectHandle, victoryEffectCoefficient > 1 ? 1 - (victoryEffectCoefficient-1)*0.5f : victoryEffectCoefficient);
       victoryImage.draw(true);
     } else {
       for (int i = 0; i < fruits.size(); i++) {
         Fruit fruit = fruits.get(i);
         if (fruit == null) continue;
-        fruit.y -= delta * 0.0005;
-        double radius = fruit.radius();
-        if (fruit.y < -1.0 + radius) {
-          fruit.y = -1.0 + radius;
-        }
-        for (int j = i + 1; j < fruits.size(); j++) {
-          if (fruits.get(j) == null) continue;
-          if (fruits.get(j).type == fruit.type && fruits.get(j).intersects(fruit)) {
-            Fruit otherFruit = fruits.get(j);
+        float heightDecrease = 1;
+        for (int j = 0; j < fruits.size(); j++) {
+          if (i == j || fruits.get(j) == null) continue;
+          if(!fruits.get(j).intersects(fruit)) continue;
+          Fruit otherFruit = fruits.get(j);
+          if (otherFruit.type == fruit.type) {
             System.out.println("Collision between fruit " + i + " and fruit " + j);
             fruits.set(i, null);
             fruits.set(j, null);
@@ -107,7 +114,15 @@ public class GameRenderer implements GLSurfaceView.Renderer {
             Fruit newFruit = new Fruit((fruit.x + otherFruit.x) * 0.5, (fruit.y + otherFruit.y) * 0.5, next);
             fruits.add(newFruit);
             break;
+          } else {
+            heightDecrease = 0;
           }
+        }
+
+        fruit.y -= delta * 0.0005 * heightDecrease;
+        double radius = fruit.radius();
+        if (fruit.y < -1.0 + radius) {
+          fruit.y = -1.0 + radius;
         }
       }
     }
@@ -124,6 +139,7 @@ public class GameRenderer implements GLSurfaceView.Renderer {
         fruitWidth, fruitHeight);
       image.draw();
     }
+
   }
   public void unload() {
     imageRenderer.unload();
@@ -131,11 +147,16 @@ public class GameRenderer implements GLSurfaceView.Renderer {
     for(Image img : fruitImages) img.unloadTexture();
     victoryImage.unloadTexture();
   }
+  public float viewPortSize;
+  float width, height;
   public void onSurfaceChanged(GL10 unused, int width, int height) {
-    GLES20.glViewport(0, 0, width, height);
-    float littler = (float) Math.max(width, height);
-    widthFix = littler / (float)width;
-    heightFix = littler / (float)height;
+    int bigger = Math.max(width, height);
+    GLES20.glViewport(0, 0, bigger, bigger);
+    widthFix = (float)bigger / (float)width;
+    heightFix = (float)bigger / (float)height;
+    this.width =  (float)width / (float)bigger;
+    this.height = (float)height / (float)bigger;
+      viewPortSize = bigger;
   }
   public static final Shader victoryShader = new Shader(GLES20.GL_FRAGMENT_SHADER,
     "\n" +

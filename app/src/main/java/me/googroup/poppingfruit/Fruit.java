@@ -13,7 +13,7 @@ public class Fruit {
   public boolean intersects(Fruit other) {
     double xDiff = x - other.x, yDiff = y - other.y;
     double distance = Math.sqrt(xDiff * xDiff + yDiff * yDiff);
-    return distance <= radius() + other.radius();
+    return distance <= (radius() + other.radius()) * radiusScale;
   }
 
   public static enum Type {
@@ -28,8 +28,9 @@ public class Fruit {
     }
   }
 
-  public static double[] radii = new double[] { 0.125, 0.2, 0.25, 0.33, 0.4, 0.5 };
+  public static final double[] radii = new double[] { 0.125, 0.2, 0.25, 0.33, 0.4, 0.5 };
 
+  public static float radiusScale = 1;
   public double radius() {
     return radii[type.ordinal()];
   }
