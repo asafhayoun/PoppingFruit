@@ -25,7 +25,7 @@ public class GameRenderer implements GLSurfaceView.Renderer {
   Image background;
   Image victoryImage;
   boolean won = false;
-  Image[] fruitImages = new Image[2];
+  Image[] fruitImages = new Image[3];
   List<Fruit> fruits;
 
   long lastDrawTime;
@@ -49,8 +49,9 @@ public class GameRenderer implements GLSurfaceView.Renderer {
     try {
       background.loadTexture(context, "game_background.jpeg");
       victoryImage.loadTexture(context, "victory.png");
-      fruitImages[0].loadTexture(context, "cherry.png");
-      fruitImages[1].loadTexture(context, "watermelon.png");
+      fruitImages[0].loadTexture(context, "blueberry.png");
+      fruitImages[1].loadTexture(context, "cherry.png");
+      fruitImages[2].loadTexture(context, "watermelon.png");
     } catch (IOException e) {
       Log.e("RESOURCE", "Can't read resources");
     }
@@ -76,8 +77,9 @@ public class GameRenderer implements GLSurfaceView.Renderer {
     long now = System.currentTimeMillis();
     if(now < lastReleasedFruit + 667) return;
     lastReleasedFruit = now;
-    fruits.add(new Fruit(newFruitX, 0.75f, Fruit.Type.CHERRY));
+    fruits.add(new Fruit(newFruitX, 0.75f, Fruit.Type.BLUEBERRY));
   }
+  public static final double GAME_SPEED = 0.0008;
   public void onDrawFrame(GL10 unused) {
     long lastTime = lastDrawTime;
     lastDrawTime = System.nanoTime();
@@ -90,18 +92,24 @@ public class GameRenderer implements GLSurfaceView.Renderer {
     fruitImages[0].setCoords(newFruitX - cherrySize , 0.75f - cherrySize ,
       cherrySize * 2 , cherrySize * 2 ).draw();
     if(won) {
-      victoryEffectCoefficient += delta * 0.001f;
+      victoryEffectCoefficient += delta * (float)GAME_SPEED;
       victoryEffectCoefficient %= 3;
       victoryImage.setCoords(-0.75f * width, 0f * height, 1.5f * width, 0.75f * height);
       GLES20.glUseProgram(victoryRenderer.id);
       GLES20.glUniform1f(victoryEffectHandle, victoryEffectCoefficient > 1 ? 1 - (victoryEffectCoefficient-1)*0.5f : victoryEffectCoefficient);
       victoryImage.draw(true);
     } else {
-      for (int i = 0; i < fruits.size(); i++) {
+      int fruitNumber = fruits.size();
+      for (int i = 0; i < fruitNumber; i++) {
         Fruit fruit = fruits.get(i);
         if (fruit == null) continue;
         float heightDecrease = 1;
-        for (int j = 0; j < fruits.size(); j++) {
+        double netDx = 0, netDy = 0;
+        int numContacts = 0;
+        // Save the original position
+        double originalX = fruit.x;
+        double originalY = fruit.y;
+        for (int j = 0; j < fruitNumber; j++) {
           if (i == j || fruits.get(j) == null) continue;
           if(!fruits.get(j).intersects(fruit)) continue;
           Fruit otherFruit = fruits.get(j);
@@ -114,19 +122,101 @@ public class GameRenderer implements GLSurfaceView.Renderer {
               won = true;
               return;
             }
+            Fruit higherFruit = fruit.y > otherFruit.y ? fruit : otherFruit;
             Fruit newFruit = new Fruit((fruit.x + otherFruit.x) * 0.5, (fruit.y + otherFruit.y) * 0.5, next);
+//            Fruit newFruit = new Fruit(higherFruit.x, higherFruit.y, next);
+            fruit = higherFruit;
+
             fruits.add(newFruit);
             break;
           } else {
-            heightDecrease = 0;
+            if(fruit.y > otherFruit.y) {
+//              double dx = otherFruit.x - fruit.x;
+//              double dy = otherFruit.y - fruit.y;
+//              double dist = Math.sqrt(dx * dx + dy * dy);
+//              double contactX = fruit.x + (dx / dist) * fruit.radius();
+//              double contactY = fruit.y + (dy / dist) * fruit.radius();
+              double dx = fruit.x - otherFruit.x;
+              double dy = fruit.y - otherFruit.y;
+              double dist = Math.sqrt(dx * dx + dy * dy);
+              double overlap = (fruit.radius() + otherFruit.radius()) - dist;
+
+              if (overlap > 0) {
+                double angle = Math.atan2(dy, dx) - GAME_SPEED * Math.PI * delta * (fruit.x - otherFruit.x) / otherFruit.radius();
+                double correctionX = Math.cos(angle) * overlap;
+                double correctionY = Math.sin(angle) * overlap * 0.5;
+                netDx += correctionX;
+                netDy += correctionY;
+              }
+              numContacts++;
+              //double angle = Math.PI/2 - ((fruit.x - otherFruit.x) /
+              //  ((fruit.radius() + otherFruit.radius()) / otherFruit.radius()) / otherFruit.radius() * Math.PI * 0.5);
+//              double angle = Math.acos((fruit.x - otherFruit.x) / (otherFruit.radius() + fruit.radius()));
+//              double nerf = Math.abs(Math.cos(angle));
+             // fruit.x += Math.sin(angle) * otherFruit.radius();
+//              Log.d("MOVEMENT", String.valueOf(angle * 180 / Math.PI));
+              //heightDecrease -= 1;
+              // double oldX = fruit.x, oldY = fruit.y;
+//              if(previousRotationRadius != 0) {
+//                //double newSupposedX = otherFruit.x + Math.cos(angle - GAME_SPEED * Math.PI * delta * (fruit.x - otherFruit.x) / otherFruit.radius()) * (otherFruit.radius() + fruit.radius());
+//              } else {
+//                fruit.x = otherFruit.x + Math.cos(angle - GAME_SPEED * Math.PI * delta * (fruit.x - otherFruit.x) / otherFruit.radius()) * (otherFruit.radius() + fruit.radius());
+//                fruit.y = otherFruit.y + Math.sin(angle - GAME_SPEED * Math.PI * delta * (fruit.x - otherFruit.x) / otherFruit.radius()) * (otherFruit.radius() + fruit.radius() * 0.5);
+//              }
+
+            }
           }
         }
-
-        fruit.y -= delta * 0.0005 * heightDecrease;
-        double radius = fruit.radius();
-        if (fruit.y < -1*height + radius) {
-          fruit.y = -1*height + radius;
+        // Calculate the net response considering all contact points
+        //if(heightDecrease > 0)
+          fruit.y -= delta * GAME_SPEED * heightDecrease;
+        if(numContacts > 0) {
+          fruit.x += netDx / numContacts;
+          Log.d("NET", netDx + ", " + netDy);
+          fruit.y += netDy / numContacts;
         }
+        double radius = fruit.radius();
+
+
+        // Check and adjust x position
+//        if (fruit.x < -1*width + radius) {
+//          fruit.x = -1*width + radius;
+//        }
+//        if (fruit.x > 1*width - radius) {
+//          fruit.x = 1*width - radius;
+//        }
+//
+//
+//        // Check for collisions after x adjustment
+//        for (Fruit c2 : fruits) {
+//          if (c2 != null && fruit.y > c2.y && c2.intersects(fruit)) {
+//            fruit.x = originalX; // Revert x adjustment if it causes collision
+//            break;
+//          }
+//        }
+//
+        // Check and adjust y position
+        if (fruit.x < -1*width + radius) {
+          fruit.y = originalY;
+          fruit.x = -width + radius;
+        }
+        if (fruit.x > 1*width - radius) {
+          fruit.y = originalY;
+          fruit.x = 1*width - radius;
+        }
+        if(fruit.y < -1*height + radius ) {
+          fruit.y = -height + radius;
+          fruit.x = originalX;
+        }
+//
+//        // Check for collisions after y adjustment
+//        for (Fruit c2 : fruits) {
+//          if (c2 != null && fruit.y > c2.y && c2.intersects(fruit)) {
+//            fruit.y = originalY; // Revert x adjustment if it causes collision
+//            break;
+//          }
+//        }
+
       }
     }
     for (int i = 0; i < fruits.size(); i++) {

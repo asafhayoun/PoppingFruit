@@ -17,6 +17,7 @@ public class Fruit {
   }
 
   public static enum Type {
+    BLUEBERRY,
     CHERRY,
     WATERMELON;
 
@@ -28,7 +29,7 @@ public class Fruit {
     }
   }
 
-  public static final double[] radii = new double[] { 0.125, 0.2, 0.25, 0.33, 0.4, 0.5 };
+  public static final double[] radii = new double[] { 0.05, 0.1, 0.141, 0.33, 0.4, 0.5 };
 
   public static float radiusScale = 1;
   public double radius() {
