@@ -25,7 +25,7 @@ public class GameRenderer implements GLSurfaceView.Renderer {
   Image background;
   Image victoryImage;
   boolean won = false;
-  Image[] fruitImages = new Image[3];
+  Image[] fruitImages = new Image[4];
   List<Fruit> fruits;
 
   long lastDrawTime;
@@ -51,7 +51,8 @@ public class GameRenderer implements GLSurfaceView.Renderer {
       victoryImage.loadTexture(context, "victory.png");
       fruitImages[0].loadTexture(context, "blueberry.png");
       fruitImages[1].loadTexture(context, "cherry.png");
-      fruitImages[2].loadTexture(context, "watermelon.png");
+      fruitImages[2].loadTexture(context, "clementine.png");
+      fruitImages[3].loadTexture(context, "watermelon.png");
     } catch (IOException e) {
       Log.e("RESOURCE", "Can't read resources");
     }
@@ -80,7 +81,7 @@ public class GameRenderer implements GLSurfaceView.Renderer {
     fruits.add(new Fruit(newFruitX, 0.75f, Fruit.Type.BLUEBERRY));
   }
   public static final double GAME_SPEED = 0.0008;
-  public void onDrawFrame(GL10 unused) {
+  public synchronized void onDrawFrame(GL10 unused) {
     long lastTime = lastDrawTime;
     lastDrawTime = System.nanoTime();
     float delta = Math.min(50f, (float) (lastDrawTime - lastTime) * 0.000001f);
@@ -103,12 +104,13 @@ public class GameRenderer implements GLSurfaceView.Renderer {
       for (int i = 0; i < fruitNumber; i++) {
         Fruit fruit = fruits.get(i);
         if (fruit == null) continue;
+        // Calculate the net response considering all contact points
         float heightDecrease = 1;
         double netDx = 0, netDy = 0;
         int numContacts = 0;
         // Save the original position
-        double originalX = fruit.x;
-        double originalY = fruit.y;
+        double originalX = fruit.lastX = fruit.x;
+        double originalY = fruit.lastY = fruit.y;
         for (int j = 0; j < fruitNumber; j++) {
           if (i == j || fruits.get(j) == null) continue;
           if(!fruits.get(j).intersects(fruit)) continue;
@@ -138,16 +140,18 @@ public class GameRenderer implements GLSurfaceView.Renderer {
 //              double contactY = fruit.y + (dy / dist) * fruit.radius();
               double dx = fruit.x - otherFruit.x;
               double dy = fruit.y - otherFruit.y;
-              double dist = Math.sqrt(dx * dx + dy * dy);
-              double overlap = (fruit.radius() + otherFruit.radius()) - dist;
+//              double dist = Math.sqrt(dx * dx + dy * dy);
+//              double overlap = (otherFruit.radius() + fruit.radius()) - dist;
 
-              if (overlap > 0) {
-                double angle = Math.atan2(dy, dx) - GAME_SPEED * Math.PI * delta * (fruit.x - otherFruit.x) / otherFruit.radius();
-                double correctionX = Math.cos(angle) * overlap;
-                double correctionY = Math.sin(angle) * overlap * 0.5;
-                netDx += correctionX;
-                netDy += correctionY;
-              }
+              //if (overlap > 0) {
+                double angle = Math.atan2(dy, dx);// - GAME_SPEED * Math.PI * delta * (fruit.x - otherFruit.x) / otherFruit.radius();
+                //double angle = Math.PI/2 - ((fruit.x - otherFruit.x) /
+                  //((fruit.radius() + otherFruit.radius()) / otherFruit.radius()) / otherFruit.radius() * Math.PI * 0.5);
+                //double correctionX = Math.cos(angle) * overlap;
+                //double correctionY = Math.sin(angle) * overlap;
+                //netDx += correctionX;
+                //netDy += correctionY;
+              //}
               numContacts++;
               //double angle = Math.PI/2 - ((fruit.x - otherFruit.x) /
               //  ((fruit.radius() + otherFruit.radius()) / otherFruit.radius()) / otherFruit.radius() * Math.PI * 0.5);
@@ -160,20 +164,25 @@ public class GameRenderer implements GLSurfaceView.Renderer {
 //              if(previousRotationRadius != 0) {
 //                //double newSupposedX = otherFruit.x + Math.cos(angle - GAME_SPEED * Math.PI * delta * (fruit.x - otherFruit.x) / otherFruit.radius()) * (otherFruit.radius() + fruit.radius());
 //              } else {
-//                fruit.x = otherFruit.x + Math.cos(angle - GAME_SPEED * Math.PI * delta * (fruit.x - otherFruit.x) / otherFruit.radius()) * (otherFruit.radius() + fruit.radius());
-//                fruit.y = otherFruit.y + Math.sin(angle - GAME_SPEED * Math.PI * delta * (fruit.x - otherFruit.x) / otherFruit.radius()) * (otherFruit.radius() + fruit.radius() * 0.5);
-//              }
+//              } else {
 
+              if(numContacts == 1) {
+                double otherX = j < i ? otherFruit.lastX : otherFruit.x;
+                double otherY = j < i ? otherFruit.lastY : otherFruit.y;
+                fruit.x = otherX + Math.cos(angle - GAME_SPEED * Math.PI * delta * (fruit.x - otherFruit.x) / otherFruit.radius()) * (otherFruit.radius() + fruit.radius());
+                fruit.y = otherY + Math.sin(angle - GAME_SPEED * Math.PI * delta * (fruit.x - otherFruit.x) / otherFruit.radius()) * (otherFruit.radius() + fruit.radius());
+              }
             }
           }
         }
-        // Calculate the net response considering all contact points
-        //if(heightDecrease > 0)
-          fruit.y -= delta * GAME_SPEED * heightDecrease;
-        if(numContacts > 0) {
-          fruit.x += netDx / numContacts;
-          Log.d("NET", netDx + ", " + netDy);
-          fruit.y += netDy / numContacts;
+//        if(numContacts > 0) {
+//          fruit.x += netDx / numContacts;
+//          Log.d("NET", netDx + ", " + netDy);
+//          fruit.y += netDy / numContacts;
+//        }
+        if(numContacts > 1) {
+          fruit.x = originalX;
+          fruit.y = originalY;
         }
         double radius = fruit.radius();
 
@@ -195,6 +204,8 @@ public class GameRenderer implements GLSurfaceView.Renderer {
 //          }
 //        }
 //
+        if(numContacts == 0)
+          fruit.y -= delta * GAME_SPEED;
         // Check and adjust y position
         if (fruit.x < -1*width + radius) {
           fruit.y = originalY;
@@ -204,7 +215,7 @@ public class GameRenderer implements GLSurfaceView.Renderer {
           fruit.y = originalY;
           fruit.x = 1*width - radius;
         }
-        if(fruit.y < -1*height + radius ) {
+        if(fruit.y < -1*height + radius) {
           fruit.y = -height + radius;
           fruit.x = originalX;
         }
