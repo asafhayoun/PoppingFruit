@@ -11,8 +11,9 @@ import me.googroup.poppingfruit.draw.Shader;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class GameRenderer implements GLSurfaceView.Renderer {
   Context context;
@@ -81,7 +82,7 @@ public class GameRenderer implements GLSurfaceView.Renderer {
     fruits.add(new Fruit(newFruitX, 0.75f, Fruit.Type.BLUEBERRY));
   }
   public static final double GAME_SPEED = 0.0008;
-  public synchronized void onDrawFrame(GL10 unused) {
+  public void onDrawFrame(GL10 unused) {
     long lastTime = lastDrawTime;
     lastDrawTime = System.nanoTime();
     float delta = Math.min(50f, (float) (lastDrawTime - lastTime) * 0.000001f);
@@ -100,18 +101,20 @@ public class GameRenderer implements GLSurfaceView.Renderer {
       GLES20.glUniform1f(victoryEffectHandle, victoryEffectCoefficient > 1 ? 1 - (victoryEffectCoefficient-1)*0.5f : victoryEffectCoefficient);
       victoryImage.draw(true);
     } else {
-      int fruitNumber = fruits.size();
-      for (int i = 0; i < fruitNumber; i++) {
+      int fruitAmount = fruits.size();
+      int currentAddedFruitIdx = 0;
+      Fruit[] addedFruits = new Fruit[fruitAmount];
+      mainLoop: for (int i = 0; i < fruitAmount; i++) {
         Fruit fruit = fruits.get(i);
         if (fruit == null) continue;
         // Calculate the net response considering all contact points
-        float heightDecrease = 1;
-        double netDx = 0, netDy = 0;
+//        float heightDecrease = 1;
+//        double netDx = 0, netDy = 0;
         int numContacts = 0;
         // Save the original position
         double originalX = fruit.lastX = fruit.x;
         double originalY = fruit.lastY = fruit.y;
-        for (int j = 0; j < fruitNumber; j++) {
+        for (int j = 0; j < fruitAmount; j++) {
           if (i == j || fruits.get(j) == null) continue;
           if(!fruits.get(j).intersects(fruit)) continue;
           Fruit otherFruit = fruits.get(j);
@@ -122,14 +125,14 @@ public class GameRenderer implements GLSurfaceView.Renderer {
             Fruit.Type next = fruit.type.nextFruit();
             if (next == null) {
               won = true;
-              return;
+              break mainLoop;
             }
             Fruit higherFruit = fruit.y > otherFruit.y ? fruit : otherFruit;
             Fruit newFruit = new Fruit((fruit.x + otherFruit.x) * 0.5, (fruit.y + otherFruit.y) * 0.5, next);
 //            Fruit newFruit = new Fruit(higherFruit.x, higherFruit.y, next);
             fruit = higherFruit;
 
-            fruits.add(newFruit);
+            addedFruits[currentAddedFruitIdx++] = newFruit;
             break;
           } else {
             if(fruit.y > otherFruit.y) {
@@ -229,14 +232,12 @@ public class GameRenderer implements GLSurfaceView.Renderer {
 //        }
 
       }
-    }
-    for (int i = 0; i < fruits.size(); i++) {
-      if (fruits.get(i) == null) {
-        fruits.remove(i);
-        i--;
-      }
+      if(currentAddedFruitIdx > 0)
+        fruits = Stream.concat(
+          fruits.stream().filter(Objects::nonNull), Arrays.stream(addedFruits)).collect(Collectors.toList());
     }
     for(Fruit fruit : fruits) {
+      if(fruit == null) continue;
       Image image = fruitImages[fruit.type.ordinal()];
       float fruitWidth = (float)fruit.radius() * 2f, fruitHeight = (float)fruit.radius() * 2f;
       image.setCoords((float)fruit.x - fruitWidth * 0.5f, (float)fruit.y - fruitHeight * 0.5f,
@@ -257,7 +258,6 @@ public class GameRenderer implements GLSurfaceView.Renderer {
     int bigger = Math.max(width, height);
 //    widthFix = (float)bigger / (float)width;
 //    heightFix = (float)bigger / (float)height
-;
     this.width =  (float)width / (float)bigger;
     this.height = (float)height / (float)bigger;
     // I spent 2 hours on this, please do not touch
