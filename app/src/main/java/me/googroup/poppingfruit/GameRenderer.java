@@ -25,7 +25,7 @@ public class GameRenderer implements GLSurfaceView.Renderer {
   float victoryEffectCoefficient = 0;
   Image background;
   Image victoryImage;
-  boolean won = false;
+  boolean won = false, lost = false;
   Image[] fruitImages = new Image[4];
   List<Fruit> fruits;
 
@@ -70,19 +70,34 @@ public class GameRenderer implements GLSurfaceView.Renderer {
     won = false;
     victoryEffectCoefficient = 0;
   }
-  float newFruitX = 0;
   void onMoveFinger(float x) {
-    newFruitX = x;
+    fruitToAdd.x = x;
   }
   long lastReleasedFruit = 0;
-  void onReleaseFinger() {
+  Random rng = new Random();
+  Fruit fruitToAdd = new Fruit(0, 0.75, Fruit.Type.BLUEBERRY);
+  synchronized boolean onReleaseFinger() {
     long now = System.currentTimeMillis();
-    if(now < lastReleasedFruit + 667) return;
+    if(now < lastReleasedFruit + 667) return false;
     lastReleasedFruit = now;
-    fruits.add(new Fruit(newFruitX, 0.75f, Fruit.Type.BLUEBERRY));
+    for (Fruit f : fruits) {
+      if(f != null && f.intersects(fruitToAdd)) {
+        return true; // LOST! :(
+      }
+    }
+    fruits.add(fruitToAdd);
+    fruitToAdd = new Fruit(fruitToAdd.x, 0.75, Fruit.Type.BLUEBERRY);
+    if(rng.nextDouble() < 0.5) {
+      if(rng.nextDouble() < 0.5) {
+        fruitToAdd.type = Fruit.Type.CLEMENTINE;
+      } else {
+        fruitToAdd.type = Fruit.Type.CHERRY;
+      }
+    }
+    return false;
   }
   public static final double GAME_SPEED = 0.0008;
-  public void onDrawFrame(GL10 unused) {
+  public synchronized void onDrawFrame(GL10 unused) {
     long lastTime = lastDrawTime;
     lastDrawTime = System.nanoTime();
     float delta = Math.min(50f, (float) (lastDrawTime - lastTime) * 0.000001f);
@@ -90,9 +105,9 @@ public class GameRenderer implements GLSurfaceView.Renderer {
     GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
     background.setCoords(-1 * width, -1 * height , 2 * width, 2 * height);
     background.draw();
-    float cherrySize = (float)Fruit.radii[0];
-    fruitImages[0].setCoords(newFruitX - cherrySize , 0.75f - cherrySize ,
-      cherrySize * 2 , cherrySize * 2 ).draw();
+    float newFruitSize = (float)Fruit.radii[fruitToAdd.type.ordinal()];
+    fruitImages[fruitToAdd.type.ordinal()].setCoords((float) (fruitToAdd.x - newFruitSize), 0.75f - newFruitSize,
+      newFruitSize * 2 , newFruitSize * 2 ).draw();
     if(won) {
       victoryEffectCoefficient += delta * (float)GAME_SPEED;
       victoryEffectCoefficient %= 3;
