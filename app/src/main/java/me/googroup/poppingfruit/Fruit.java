@@ -3,12 +3,12 @@ package me.googroup.poppingfruit;
 public class Fruit {
   public double x, y;
   public double lastX, lastY;
+  public double rotation = 0;
   public Type type;
 
   public Fruit(double x, double y, Type type) {
-    this.x = x;
-    this.y = y;
-    lastX = lastY = 0;
+    this.x = lastX = x;
+    this.y = lastY = y;
     this.type = type;
   }
 

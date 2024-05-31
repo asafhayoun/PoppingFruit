@@ -129,6 +129,7 @@ public class GameRenderer implements GLSurfaceView.Renderer {
         // Save the original position
         double originalX = fruit.lastX = fruit.x;
         double originalY = fruit.lastY = fruit.y;
+        double originalRotation = fruit.rotation;
         for (int j = 0; j < fruitAmount; j++) {
           if (i == j || fruits.get(j) == null) continue;
           if(!fruits.get(j).intersects(fruit)) continue;
@@ -189,6 +190,7 @@ public class GameRenderer implements GLSurfaceView.Renderer {
                 double otherY = j < i ? otherFruit.lastY : otherFruit.y;
                 fruit.x = otherX + Math.cos(angle - GAME_SPEED * Math.PI * delta * (fruit.x - otherFruit.x) / otherFruit.radius()) * (otherFruit.radius() + fruit.radius());
                 fruit.y = otherY + Math.sin(angle - GAME_SPEED * Math.PI * delta * (fruit.x - otherFruit.x) / otherFruit.radius()) * (otherFruit.radius() + fruit.radius());
+                fruit.rotation -= GAME_SPEED * Math.PI * 4 * delta / otherFruit.radius() * (fruit.x - otherFruit.x);
               }
             }
           }
@@ -201,6 +203,7 @@ public class GameRenderer implements GLSurfaceView.Renderer {
         if(numContacts > 1) {
           fruit.x = originalX;
           fruit.y = originalY;
+          fruit.rotation = originalRotation;
         }
         double radius = fruit.radius();
 
@@ -228,14 +231,17 @@ public class GameRenderer implements GLSurfaceView.Renderer {
         if (fruit.x < -1*width + radius) {
           fruit.y = originalY;
           fruit.x = -width + radius;
+          fruit.rotation = originalRotation;
         }
         if (fruit.x > 1*width - radius) {
           fruit.y = originalY;
           fruit.x = 1*width - radius;
+          fruit.rotation = originalRotation;
         }
         if(fruit.y < -1*height + radius) {
           fruit.y = -height + radius;
           fruit.x = originalX;
+          fruit.rotation = originalRotation;
         }
 //
 //        // Check for collisions after y adjustment
@@ -256,7 +262,7 @@ public class GameRenderer implements GLSurfaceView.Renderer {
       Image image = fruitImages[fruit.type.ordinal()];
       float fruitWidth = (float)fruit.radius() * 2f, fruitHeight = (float)fruit.radius() * 2f;
       image.setCoords((float)fruit.x - fruitWidth * 0.5f, (float)fruit.y - fruitHeight * 0.5f,
-        fruitWidth, fruitHeight);
+        fruitWidth, fruitHeight, (float)fruit.rotation);
       image.draw();
     }
 

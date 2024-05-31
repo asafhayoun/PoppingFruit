@@ -64,6 +64,36 @@ public class Image {
     });
     return this;
   }
+  public void setCoords(float x, float y, float width, float height, float rotation) {
+    // Calculate the center of the square
+    float centerX = x + width / 2.0f;
+    float centerY = y + height / 2.0f;
+
+    // Calculate the coordinates of each corner relative to the center
+    float[] coords = new float[] {
+      x - centerX, y + height - centerY, 0.0f,   // top left
+      x - centerX, y - centerY, 0.0f,            // bottom left
+      x + width - centerX, y - centerY, 0.0f,    // bottom right
+      x + width - centerX, y + height - centerY, 0.0f // top right
+    };
+
+    // Apply rotation to each vertex
+    for (int i = 0; i < coords.length; i += 3) {
+      float oldX = coords[i];
+      float oldY = coords[i + 1];
+      coords[i] = (float)(oldX * Math.cos(rotation) - oldY * Math.sin(rotation));
+      coords[i + 1] = (float)(oldX * Math.sin(rotation) + oldY * Math.cos(rotation));
+    }
+
+    // Translate back to the original position
+    for (int i = 0; i < coords.length; i += 3) {
+      coords[i] += centerX;
+      coords[i + 1] += centerY;
+    }
+
+    setCoords(coords);
+  }
+
   @NotNull
   public Offset getSecondVertexXY() {
     return new Offset(quadrantVertexBuffer.get(3), quadrantVertexBuffer.get(4));
