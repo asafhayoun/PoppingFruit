@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Dialog" parent="Theme.AppCompat.Dialog">
+        <item name="android:dialogCornerRadius">12dp</item>
+        <item name="android:textColor">#669900</item>
+        <item name="android:background">#eeeebb</item>
+        <item name="android:fontFamily">"serif"</item>
+        <item name="android:windowNoTitle">false</item>
+        <item name="android:windowIsFloating">true</item>
+    </style>
+</resources>

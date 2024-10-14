@@ -18,7 +18,7 @@
                 android:label="@string/title_activity_game"
                 android:theme="@style/Theme.PoppingFruit"/>
         <activity
-                android:name="me.googroup.poppingfruit.SettingsActivity"
+                android:name="me.googroup.poppingfruit.SettingsDialog"
                 android:exported="false"/>
         <activity
                 android:name="me.googroup.poppingfruit.MainActivity"

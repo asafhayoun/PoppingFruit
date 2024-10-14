@@ -15,8 +15,8 @@ public class MainActivity extends AppCompatActivity {
     Button play = findViewById(R.id.play_button);
     Button settings = findViewById(R.id.settings_button);
     settings.setOnClickListener((view) -> {
-      Intent intent = new Intent(MainActivity.this, SettingsActivity.class);
-      startActivity(intent);
+      SettingsDialog dialog = new SettingsDialog(this);
+      dialog.show();
     });
     play.setOnClickListener((view) -> {
       Intent intent = new Intent(MainActivity.this, GameActivity.class);

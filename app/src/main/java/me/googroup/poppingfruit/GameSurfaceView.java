@@ -1,18 +1,26 @@
 package me.googroup.poppingfruit;
 
 import android.content.Context;
+import android.content.SharedPreferences;
+import android.media.MediaPlayer;
 import android.opengl.GLSurfaceView;
 import android.view.MotionEvent;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import me.googroup.popping_fruit.R;
 
 public class GameSurfaceView extends GLSurfaceView {
-  private final GameRenderer renderer;
+  public final GameRenderer renderer;
   public GameSurfaceView(Context context) {
     super(context);
     // Create an OpenGL ES 2.0 context
     setEGLContextClientVersion(2);
+    SharedPreferences sharedPreferences = context.getSharedPreferences("settings", Context.MODE_PRIVATE);
     renderer = new GameRenderer(context);
+    renderer.popSound = MediaPlayer.create(context, R.raw.pop);
+    renderer.music = MediaPlayer.create(context, R.raw.music);
+    renderer.sfxVol = sharedPreferences.getInt("sfx", 100) * 0.01f;
+    renderer.musicVol = sharedPreferences.getInt("music", 100) * 0.01f;
     // Set the Renderer for drawing on the GLSurfaceView
     setRenderer(renderer);
   }

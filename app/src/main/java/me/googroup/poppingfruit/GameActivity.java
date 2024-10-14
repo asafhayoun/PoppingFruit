@@ -14,11 +14,17 @@ import androidx.navigation.ui.NavigationUI;
 import me.googroup.popping_fruit.R;
 
 public class GameActivity extends AppCompatActivity {
-  GLSurfaceView view;
+  GameSurfaceView view;
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     view = new GameSurfaceView(this);
     setContentView(view);
+  }
+
+  @Override
+  protected void onDestroy() {
+    super.onDestroy();
+    view.renderer.music.stop();
   }
 }

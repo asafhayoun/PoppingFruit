@@ -22,6 +22,8 @@ public class Fruit {
     BLUEBERRY,
     CHERRY,
     CLEMENTINE,
+    PEACH,
+    PINEAPPLE,
     WATERMELON;
 
     public Type nextFruit() {
